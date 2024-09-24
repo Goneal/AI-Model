@@ -2,12 +2,17 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftConfig, PeftModel
 import torch
 
+# Check for GPU availability
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
 # Initialize tokenizer and model
-model_name = "ammarnasr/codegen-350M-mono-swift"  # A model for Swift code generation
+model_name = "ammarnasr/codegen-350M-mono-swift"  # The correct Swift model
 peft_config = PeftConfig.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(peft_config.base_model_name_or_path)
 model = AutoModelForCausalLM.from_pretrained(peft_config.base_model_name_or_path)
 model = PeftModel.from_pretrained(model, model_name)
+model = model.to(device)  # Move the model to the GPU if available
 
 def generate_code_for_task(task_description):
     prompt = f"""
@@ -42,29 +47,52 @@ import Foundation
 // MARK: - Implementation
 
 """
-    input_ids = tokenizer.encode(prompt, return_tensors='pt')
-    attention_mask = torch.ones_like(input_ids)  # Create attention mask
+    input_ids = tokenizer.encode(prompt, return_tensors='pt').to(device)
+    attention_mask = torch.ones_like(input_ids).to(device)  # Create attention mask and move to GPU
 
     print(f"Input IDs shape: {input_ids.shape}")
     print(f"Attention mask shape: {attention_mask.shape}")
 
     try:
-        with torch.no_grad():
-            print("Starting model generation...")
-            output = model.generate(
-                input_ids,
-                attention_mask=attention_mask,  # Add attention mask
-                max_length=2500,  # Increased to allow for more comprehensive implementations
-                num_return_sequences=1,
-                do_sample=False,  # Changed to False for compatibility with beam search
-                repetition_penalty=1.5,  # Increased to further reduce repetition
-                pad_token_id=tokenizer.eos_token_id,
-                no_repeat_ngram_size=5,  # Increased to avoid larger phrase repetitions
-                early_stopping=True,
-                length_penalty=1.8,  # Increased to encourage longer, more detailed responses
-                num_beams=4  # Added for beam search
-            )
-            print(f"Generation complete. Output shape: {output.shape}")
+        import threading
+        import queue
+
+        def generate_with_timeout(q):
+            try:
+                with torch.no_grad():
+                    output = model.generate(
+                        input_ids,
+                        attention_mask=attention_mask,
+                        max_length=1000,  # Further reduced to optimize for CPU
+                        num_return_sequences=1,
+                        do_sample=False,
+                        repetition_penalty=1.1,
+                        pad_token_id=tokenizer.eos_token_id,
+                        no_repeat_ngram_size=2,
+                        early_stopping=True,
+                        length_penalty=1.2,
+                        num_beams=1  # Reduced to greedy search for faster generation
+                    )
+                q.put(output)
+            except Exception as e:
+                q.put(e)
+
+        print("Starting model generation...")
+        q = queue.Queue()
+        generation_thread = threading.Thread(target=generate_with_timeout, args=(q,))
+        generation_thread.start()
+        generation_thread.join(timeout=300)  # 5 minutes timeout
+
+        if generation_thread.is_alive():
+            print("Generation timed out after 5 minutes")
+            return None
+
+        result = q.get()
+        if isinstance(result, Exception):
+            raise result
+
+        output = result
+        print(f"Generation complete. Output shape: {output.shape}")
 
         code_snippet = tokenizer.decode(output[0], skip_special_tokens=True)
         print(f"Decoded snippet length: {len(code_snippet)}")
