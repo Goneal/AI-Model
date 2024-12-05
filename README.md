@@ -2,12 +2,16 @@
 
 This repository contains the AI model for generating Swift code for iOS applications. The model is designed to assist in creating code snippets and automating parts of the iOS development process.
 
+## Purpose
+
+The purpose of this repository is to provide an AI-driven solution for generating Swift code, which can be used to accelerate iOS app development. The model leverages machine learning techniques to produce high-quality code snippets based on user-defined prompts.
+
 ## Installation
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/Goneal/AI-iOS-Model.git
-   cd AI-iOS-Model
+   git clone https://github.com/Goneal/AI-Model.git
+   cd AI-Model
    ```
 
 2. **Install Dependencies**

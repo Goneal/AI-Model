@@ -1,0 +1,12 @@
+Organize and annotate the following Swift files for training the AI model on iOS app architectures and design patterns:
+
+1. /home/ubuntu/AI-Model/Sources/MyApp/MyApp.swift
+   - Focus on main app structure and entry point.
+
+2. /home/ubuntu/AI-Model/Tests/MyAppTests/CreateLoginUITests.swift
+   - Annotate UI test patterns and structure.
+
+3. /home/ubuntu/MyApp/Models/UserAuthenticationManager.swift
+   - Highlight user authentication logic and API interaction patterns.
+
+Create input-output pairs for supervised learning by extracting relevant code snippets and their corresponding architectural descriptions.
